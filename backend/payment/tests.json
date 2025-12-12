@@ -18,13 +18,18 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "POST with email (will fail without secrets)",
+      "name": "POST with email returns payment URL",
       "method": "POST",
       "path": "/",
       "body": {
         "email": "test@example.com"
       },
-      "expectedStatus": 500
+      "expectedStatus": 200,
+      "expectedBody": {
+        "payment_url": "string",
+        "order_id": "string"
+      },
+      "bodyMatcher": "partial"
     }
   ]
 }

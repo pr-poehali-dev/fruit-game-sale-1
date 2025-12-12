@@ -1,13 +1,11 @@
 import json
 import os
-import uuid
+import hashlib
 from typing import Dict, Any
-import requests
-from base64 import b64encode
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Создаёт платёж в ЮKassa и возвращает ссылку для оплаты
+    Создаёт платёж в Enot.io и возвращает ссылку для оплаты
     '''
     method: str = event.get('httpMethod', 'GET')
     
@@ -47,8 +45,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
-    shop_id = os.environ.get('YOOKASSA_SHOP_ID')
-    secret_key = os.environ.get('YOOKASSA_SECRET_KEY')
+    shop_id = os.environ.get('ENOT_SHOP_ID')
+    secret_key = os.environ.get('ENOT_SECRET_KEY')
     
     if not shop_id or not secret_key:
         return {
@@ -58,73 +56,35 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
-    idempotence_key = str(uuid.uuid4())
+    # Генерируем уникальный order_id на основе email и времени
+    import time
+    order_id = f"frot_{int(time.time())}_{hash(email) % 100000}"
+    amount = "20"
+    currency = "RUB"
     
-    auth_string = f"{shop_id}:{secret_key}"
-    auth_header = b64encode(auth_string.encode()).decode()
+    # Создаём подпись для Enot.io
+    # Формат: md5(shop_id:amount:secret_key:order_id)
+    sign_string = f"{shop_id}:{amount}:{secret_key}:{order_id}"
+    sign = hashlib.md5(sign_string.encode()).hexdigest()
     
-    payment_data = {
-        "amount": {
-            "value": "20.00",
-            "currency": "RUB"
-        },
-        "confirmation": {
-            "type": "redirect",
-            "return_url": event.get('headers', {}).get('origin', 'https://example.com')
-        },
-        "capture": True,
-        "description": "Покупка игры Frot",
-        "receipt": {
-            "customer": {
-                "email": email
-            },
-            "items": [{
-                "description": "Игра Frot",
-                "quantity": "1",
-                "amount": {
-                    "value": "20.00",
-                    "currency": "RUB"
-                },
-                "vat_code": 1
-            }]
-        }
+    # Формируем URL для оплаты
+    payment_url = (
+        f"https://enot.io/pay?"
+        f"m={shop_id}"
+        f"&oa={amount}"
+        f"&c={currency}"
+        f"&o={order_id}"
+        f"&s={sign}"
+        f"&cr={currency}"
+        f"&cf={email}"
+    )
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'payment_url': payment_url,
+            'order_id': order_id
+        }),
+        'isBase64Encoded': False
     }
-    
-    try:
-        response = requests.post(
-            'https://api.yookassa.ru/v3/payments',
-            json=payment_data,
-            headers={
-                'Authorization': f'Basic {auth_header}',
-                'Idempotence-Key': idempotence_key,
-                'Content-Type': 'application/json'
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({
-                    'payment_url': result['confirmation']['confirmation_url'],
-                    'payment_id': result['id']
-                }),
-                'isBase64Encoded': False
-            }
-        else:
-            return {
-                'statusCode': response.status_code,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Payment creation failed', 'details': response.text}),
-                'isBase64Encoded': False
-            }
-    
-    except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': str(e)}),
-            'isBase64Encoded': False
-        }
