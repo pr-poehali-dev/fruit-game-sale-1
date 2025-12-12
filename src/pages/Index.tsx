@@ -103,12 +103,12 @@ export default function Index() {
           <Badge className="mb-4 px-4 py-2 text-sm" variant="secondary">
             Специальная цена
           </Badge>
-          <div className="relative inline-block">
+          <div className="flex items-start justify-center gap-2">
             <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-purple-900 bg-clip-text text-transparent">
               FROT
             </h1>
-            <Badge className="absolute -left-16 top-0 text-xs px-2 py-1" variant="outline">
-              NEW
+            <Badge className="text-xs px-2 py-1 mt-2" variant="outline">
+              HEAD
             </Badge>
           </div>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 font-light">
