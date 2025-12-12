@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
 
 const genres = [
   { id: 'strategy', name: 'Стратегия', icon: 'Crown', description: 'Планируй, управляй, побеждай' },
@@ -18,8 +22,78 @@ const features = [
   { icon: 'Shield', title: 'Без рекламы', text: 'Чистый игровой опыт' },
 ];
 
+const PAYMENT_API = 'https://functions.poehali.dev/9bc03f49-45f0-4726-b60e-8ea4b0d8a85f';
+
 export default function Index() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
+  const [viewCount, setViewCount] = useState(1247);
+  const [email, setEmail] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setViewCount(prev => prev + Math.floor(Math.random() * 3));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleGenreSelect = (genreId: string) => {
+    setSelectedGenre(genreId);
+    const genre = genres.find(g => g.id === genreId);
+    toast({
+      title: `${genre?.name} выбран!`,
+      description: `Frot в жанре ${genre?.name} — отличный выбор!`,
+    });
+  };
+
+  const handlePurchase = () => {
+    setIsPurchaseOpen(true);
+  };
+
+  const handleConfirmPurchase = async () => {
+    if (!email) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пожалуйста, введите email',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch(PAYMENT_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.payment_url) {
+        window.location.href = data.payment_url;
+      } else {
+        toast({
+          title: 'Ошибка оплаты',
+          description: data.error || 'Попробуйте позже',
+          variant: 'destructive',
+        });
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать платёж',
+        variant: 'destructive',
+      });
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-purple-50/30 to-white">
@@ -30,17 +104,27 @@ export default function Index() {
             Специальная цена
           </Badge>
           <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-purple-900 bg-clip-text text-transparent">
-            FROTA
+            FROT
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 font-light">
             Новая эра игрового опыта
           </p>
-          <div className="flex items-center justify-center gap-4">
-            <span className="text-4xl md:text-5xl font-bold text-purple-600">20 ₽</span>
-            <Button size="lg" className="text-lg px-8 py-6 animate-scale-in shadow-lg hover:shadow-xl transition-all">
-              Купить сейчас
-              <Icon name="ArrowRight" size={20} className="ml-2" />
-            </Button>
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon name="Eye" size={16} />
+              <span>{viewCount.toLocaleString()} просмотров</span>
+            </div>
+            <div className="flex items-center justify-center gap-4">
+              <span className="text-4xl md:text-5xl font-bold text-purple-600">20 ₽</span>
+              <Button 
+                size="lg" 
+                className="text-lg px-8 py-6 animate-scale-in shadow-lg hover:shadow-xl transition-all"
+                onClick={handlePurchase}
+              >
+                Купить сейчас
+                <Icon name="ArrowRight" size={20} className="ml-2" />
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -58,22 +142,28 @@ export default function Index() {
                 key={genre.id}
                 className={`p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
                   selectedGenre === genre.id 
-                    ? 'ring-2 ring-purple-600 bg-purple-50' 
+                    ? 'ring-2 ring-purple-600 bg-purple-50 scale-105' 
                     : 'hover:border-purple-300'
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
-                onClick={() => setSelectedGenre(genre.id)}
+                onClick={() => handleGenreSelect(genre.id)}
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className={`mb-4 p-4 rounded-full transition-colors ${
+                  <div className={`mb-4 p-4 rounded-full transition-all duration-300 ${
                     selectedGenre === genre.id 
-                      ? 'bg-purple-600 text-white' 
+                      ? 'bg-purple-600 text-white scale-110' 
                       : 'bg-purple-100 text-purple-600'
                   }`}>
                     <Icon name={genre.icon as any} size={32} />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">{genre.name}</h3>
                   <p className="text-sm text-muted-foreground">{genre.description}</p>
+                  {selectedGenre === genre.id && (
+                    <Badge className="mt-3" variant="default">
+                      <Icon name="Check" size={14} className="mr-1" />
+                      Выбрано
+                    </Badge>
+                  )}
                 </div>
               </Card>
             ))}
@@ -85,7 +175,7 @@ export default function Index() {
             Возможности игры
           </h2>
           <p className="text-center text-muted-foreground mb-12 text-lg">
-            Всё, что делает Frota особенной
+            Всё, что делает Frot особенной
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -116,8 +206,13 @@ export default function Index() {
           <p className="text-lg mb-8 text-purple-100">
             Присоединяйтесь к тысячам игроков уже сегодня
           </p>
-          <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all">
-            Купить Frota за 20 ₽
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all"
+            onClick={handlePurchase}
+          >
+            Купить Frot за 20 ₽
             <Icon name="ShoppingCart" size={20} className="ml-2" />
           </Button>
         </section>
@@ -126,9 +221,63 @@ export default function Index() {
 
       <footer className="border-t mt-20 py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2025 Frota Game. Все права защищены.</p>
+          <p>© 2025 Frot Game. Все права защищены.</p>
         </div>
       </footer>
+
+      <Dialog open={isPurchaseOpen} onOpenChange={setIsPurchaseOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Купить Frot</DialogTitle>
+            <DialogDescription>
+              Введите email для получения игры
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email адрес</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isProcessing}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+              <span className="text-sm font-medium">Итого к оплате:</span>
+              <span className="text-2xl font-bold text-purple-600">20 ₽</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPurchaseOpen(false)}
+              disabled={isProcessing}
+            >
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleConfirmPurchase}
+              disabled={isProcessing}
+              className="gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Icon name="Loader2" size={16} className="animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                <>
+                  <Icon name="CreditCard" size={16} />
+                  Оплатить
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
