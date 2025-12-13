@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Download with valid order",
+      "method": "GET",
+      "path": "/?order_id=test_order_123",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "download_url": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Download without order_id",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

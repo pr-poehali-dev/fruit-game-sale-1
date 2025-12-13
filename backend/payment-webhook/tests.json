@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Valid webhook",
+      "method": "POST",
+      "path": "/?m=888f463d&oa=20&o=test_order_123&s=test_sign&cf=test@example.com",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
