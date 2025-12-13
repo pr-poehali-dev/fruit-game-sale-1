@@ -63,13 +63,21 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, promo_code: promoCode }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.payment_url) {
-        window.location.href = data.payment_url;
+        if (data.discount_applied) {
+          toast({
+            title: 'Промокод применён!',
+            description: `Цена: ${data.amount} ₽`,
+          });
+        }
+        setTimeout(() => {
+          window.location.href = data.payment_url;
+        }, data.discount_applied ? 1500 : 0);
       } else {
         toast({
           title: 'Ошибка оплаты',

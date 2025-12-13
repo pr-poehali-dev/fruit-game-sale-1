@@ -1,6 +1,7 @@
 import json
 import os
 import hashlib
+import psycopg2
 from typing import Dict, Any
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -36,6 +37,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     body_data = json.loads(body_str)
     email = body_data.get('email', '')
+    promo_code = body_data.get('promo_code', '').upper().strip()
     
     if not email:
         return {
@@ -56,22 +58,61 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
+    # Проверяем промокод и применяем скидку
+    amount = 20
+    discount_applied = False
+    
+    if promo_code:
+        try:
+            dsn = os.environ.get('DATABASE_URL')
+            conn = psycopg2.connect(dsn)
+            cur = conn.cursor()
+            
+            cur.execute("""
+                SELECT discount_percent, max_uses, current_uses, is_active 
+                FROM promo_codes 
+                WHERE code = %s
+            """, (promo_code,))
+            
+            promo_result = cur.fetchone()
+            
+            if promo_result:
+                discount_percent, max_uses, current_uses, is_active = promo_result
+                
+                if is_active and current_uses < max_uses:
+                    # Применяем скидку
+                    amount = amount * (100 - discount_percent) / 100
+                    discount_applied = True
+                    
+                    # Увеличиваем счётчик использований
+                    cur.execute("""
+                        UPDATE promo_codes 
+                        SET current_uses = current_uses + 1 
+                        WHERE code = %s
+                    """, (promo_code,))
+                    conn.commit()
+            
+            cur.close()
+            conn.close()
+        except Exception:
+            pass  # Если ошибка с промокодом, продолжаем без скидки
+    
     # Генерируем уникальный order_id на основе email и времени
     import time
     order_id = f"frot_{int(time.time())}_{hash(email) % 100000}"
-    amount = "20"
+    amount_str = str(int(amount))
     currency = "RUB"
     
     # Создаём подпись для Enot.io
     # Формат: md5(shop_id:amount:secret_key:order_id)
-    sign_string = f"{shop_id}:{amount}:{secret_key}:{order_id}"
+    sign_string = f"{shop_id}:{amount_str}:{secret_key}:{order_id}"
     sign = hashlib.md5(sign_string.encode()).hexdigest()
     
     # Формируем URL для оплаты
     payment_url = (
         f"https://enot.io/pay?"
         f"m={shop_id}"
-        f"&oa={amount}"
+        f"&oa={amount_str}"
         f"&c={currency}"
         f"&o={order_id}"
         f"&s={sign}"
@@ -84,7 +125,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({
             'payment_url': payment_url,
-            'order_id': order_id
+            'order_id': order_id,
+            'amount': amount_str,
+            'discount_applied': discount_applied
         }),
         'isBase64Encoded': False
     }

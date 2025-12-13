@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "Check valid promo code",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "promo_code": "FROT31DEKABR"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "valid": true
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Check invalid promo code",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "promo_code": "INVALID"
+      },
+      "expectedStatus": 404,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
