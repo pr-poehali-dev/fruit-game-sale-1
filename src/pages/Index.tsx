@@ -27,17 +27,9 @@ const PAYMENT_API = 'https://functions.poehali.dev/9bc03f49-45f0-4726-b60e-8ea4b
 export default function Index() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
-  const [viewCount, setViewCount] = useState(1247);
   const [email, setEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setViewCount(prev => prev + Math.floor(Math.random() * 3));
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleGenreSelect = (genreId: string) => {
     setSelectedGenre(genreId);
@@ -110,10 +102,6 @@ export default function Index() {
             Новая эра игрового опыта
           </p>
           <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon name="Eye" size={16} />
-              <span>{viewCount.toLocaleString()} просмотров</span>
-            </div>
             <div className="flex items-center justify-center gap-4">
               <span className="text-4xl md:text-5xl font-bold text-purple-600">20 ₽</span>
               <Button 
