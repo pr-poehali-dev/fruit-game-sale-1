@@ -16,7 +16,6 @@ const genres = [
 ];
 
 const features = [
-  { icon: 'Users', title: 'Мультиплеер', text: 'Играй с друзьями онлайн' },
   { icon: 'Trophy', title: 'Достижения', text: '50+ наград за прохождение' },
   { icon: 'Sparkles', title: 'HD графика', text: 'Красивая визуализация' },
   { icon: 'Shield', title: 'Без рекламы', text: 'Чистый игровой опыт' },
