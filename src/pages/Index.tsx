@@ -28,6 +28,7 @@ export default function Index() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
   const [email, setEmail] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -233,6 +234,17 @@ export default function Index() {
                 placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isProcessing}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="promo">Промокод (необязательно)</Label>
+              <Input
+                id="promo"
+                type="text"
+                placeholder="Введите промокод"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 disabled={isProcessing}
               />
             </div>
